@@ -8,8 +8,6 @@ const Time = require('./Time.js')
 let busTimes = require('./busTimes')
 
 
-let arrivalT, requiredT, actualT, lunchBreak, minimum
-
 const main = async () => {
     program
         .version(require('./package.json').version, '-v', '--version')
@@ -18,7 +16,15 @@ const main = async () => {
         .option('-l, --lunch [time]', 'Lunch pause, if left empty it will remove the lunch brake time')
         .option('-r, --requiredTime <time>', 'Changes de default required time of work')
         .option('-b, --breakTime <time>', 'Changes default brake/lunch time')
-        .parse(process.argv)
+
+    program
+        .description('Changes the bus times')
+        .command('changeBus')
+        .action(() => {
+            changeBusFile(inquirer) 
+            process.exit
+        })
+    program.parse(process.argv)
 
     if (program.requiredTime) {
         updateDefaultFile('requiredTime', program.requiredTime)
@@ -26,7 +32,6 @@ const main = async () => {
     if (program.breakTime) {
         updateDefaultFile('breakTime', program.breakTime)
     }
-
     defaultValues = require(configPath)
     let time = {
         lunchBreak: Time.stringToTime(program.lunch ? typeof program.lunch === 'string' ? program.lunch : null : defaultValues.breakTime),
@@ -48,7 +53,29 @@ const main = async () => {
     time['desired'] = Time.stringToTime(departureTime.time)
     await calculate(time.desired, time.arrival, time.actual)
 }
+const changeBusFile = async (inquirer, busTimes = []) => {
+    let questions = [
+        {
+            type: 'input',
+            name: 'busTime',
+            message: 'Insert the first bus time'
+        },
+        {
+            type: 'input',
+            name: 'confirm',
+            message: 'Do you want to enter another bus time?(y/n)',
+            default: 'y'
+        }
+    ]
+    response = await inquirer.promt(questions)
+    busTimes.push(response.busTime)
+    if (response.confirm) {
+        await changeBusFile(inquirer, busTimes)
+    }
+    return busTimes
 
+
+}
 const updateDefaultFile = (key, value) => {
     defaultValues = require(configPath)
     defaultValues[key] = value
